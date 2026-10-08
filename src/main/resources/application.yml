@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: adaptive-rag
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: llama3.1:8b
+          temperature: 0.2
+      embedding:
+        options:
+          model: nomic-embed-text
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/adaptive_rag
