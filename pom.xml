@@ -44,6 +44,16 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-ollama</artifactId>
         </dependency>
+        <!-- Vector store for document chunks (auto-configures a VectorStore bean) -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-vector-store-qdrant</artifactId>
+        </dependency>
+        <!-- PDF text extraction (wraps Apache PDFBox), one Document per page -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pdf-document-reader</artifactId>
+        </dependency>
         <!-- Chat history persistence -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -1,4 +1,6 @@
 package com.adaptiverag.model;
 
-public record QueryResponse(String answer) {
+import java.util.List;
+
+public record QueryResponse(String answer, List<Source> sources) {
 }

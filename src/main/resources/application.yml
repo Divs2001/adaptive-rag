@@ -11,6 +11,24 @@ spring:
       embedding:
         options:
           model: nomic-embed-text
+    vectorstore:
+      qdrant:
+        host: localhost
+        port: 6334
+        collection-name: documents
+        initialize-schema: true
   data:
     mongodb:
       uri: mongodb://localhost:27017/adaptive_rag
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
+rag:
+  chunking:
+    chunk-size: 500
+    overlap: 50
+  retrieval:
+    top-k: 4
+    similarity-threshold: 0.5
