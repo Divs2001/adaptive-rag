@@ -1,12 +1,16 @@
 package com.adaptiverag.controller;
 
+import com.adaptiverag.model.ChatMessage;
 import com.adaptiverag.model.IngestionResult;
 import com.adaptiverag.model.QueryRequest;
 import com.adaptiverag.model.QueryResponse;
+import com.adaptiverag.service.ChatHistoryService;
 import com.adaptiverag.service.DocumentService;
 import com.adaptiverag.service.RagService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,16 +19,20 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/rag")
 public class RagController {
 
     private final RagService ragService;
     private final DocumentService documentService;
+    private final ChatHistoryService chatHistoryService;
 
-    public RagController(RagService ragService, DocumentService documentService) {
+    public RagController(RagService ragService, DocumentService documentService, ChatHistoryService chatHistoryService) {
         this.ragService = ragService;
         this.documentService = documentService;
+        this.chatHistoryService = chatHistoryService;
     }
 
     @PostMapping(value = "/documents/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -41,6 +49,11 @@ public class RagController {
         if (request.query() == null || request.query().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "query must not be blank");
         }
-        return ragService.answer(request.query());
+        return ragService.answer(request.query(), request.sessionId());
+    }
+
+    @GetMapping("/sessions/{sessionId}/messages")
+    public List<ChatMessage> history(@PathVariable String sessionId) {
+        return chatHistoryService.all(sessionId);
     }
 }

@@ -17,9 +17,13 @@ spring:
         port: 6334
         collection-name: documents
         initialize-schema: true
+  # Spring Boot 4 moved connection settings from spring.data.mongodb.* to spring.mongodb.*
+  mongodb:
+    uri: mongodb://localhost:27017/adaptive_rag
   data:
     mongodb:
-      uri: mongodb://localhost:27017/adaptive_rag
+      # Create indexes declared with @Indexed (e.g. on sessionId) at startup
+      auto-index-creation: true
   servlet:
     multipart:
       max-file-size: 20MB
@@ -32,3 +36,11 @@ rag:
   retrieval:
     top-k: 4
     similarity-threshold: 0.5
+  chat-history:
+    max-messages: 6
+  web-search:
+    max-results: 5
+    tavily:
+      base-url: https://api.tavily.com
+      # Never commit the key: it's read from the TAVILY_API_KEY environment variable
+      api-key: ${TAVILY_API_KEY:}
