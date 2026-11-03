@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Adaptive RAG</title>
+    <style>
+        /* ---------- Theme: light by default, dark if the OS prefers it ---------- */
+        :root {
+            --bg: #f6f7f9;
+            --panel: #ffffff;
+            --text: #1d2330;
+            --muted: #6b7280;
+            --border: #e3e6eb;
+            --user-bg: #2f5bea;
+            --user-text: #ffffff;
+            --document: #0f7b4f;
+            --general: #5b4bd6;
+            --web: #b45309;
+            --error: #c0362c;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #12151b;
+                --panel: #1b1f27;
+                --text: #e6e8ec;
+                --muted: #9aa1ad;
+                --border: #2c323d;
+                --user-bg: #3b67f0;
+                --document: #34c389;
+                --general: #9b8cff;
+                --web: #f0a24a;
+                --error: #ff7b70;
+            }
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: var(--panel);
+            border-bottom: 1px solid var(--border);
+        }
+        header h1 { font-size: 17px; margin: 0; flex: 1; }
+        button {
+            font: inherit;
+            padding: 7px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--panel);
+            color: var(--text);
+            cursor: pointer;
+        }
+        button:hover:not(:disabled) { border-color: var(--muted); }
+        button:disabled { opacity: 0.5; cursor: default; }
+        button.primary { background: var(--user-bg); border-color: var(--user-bg); color: var(--user-text); }
+
+        /* ---------- Conversation ---------- */
+        #messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            max-width: 860px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        .msg { max-width: 80%; padding: 10px 14px; border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .msg.user { align-self: flex-end; background: var(--user-bg); color: var(--user-text); border-bottom-right-radius: 4px; }
+        .msg.assistant { align-self: flex-start; background: var(--panel); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+        .msg.system { align-self: center; color: var(--muted); font-size: 13px; }
+        .msg.error { align-self: center; color: var(--error); font-size: 13px; }
+
+        .badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            padding: 2px 8px;
+            border-radius: 999px;
+            margin-bottom: 6px;
+            color: #fff;
+        }
+        .badge.DOCUMENT { background: var(--document); }
+        .badge.GENERAL { background: var(--general); }
+        .badge.WEB { background: var(--web); }
+
+        .sources { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); white-space: normal; }
+        .sources a { color: inherit; }
+        .sources li { margin: 2px 0; }
+        .sources ul { margin: 4px 0 0; padding-left: 18px; }
+
+        .thinking { color: var(--muted); font-style: italic; }
+
+        /* ---------- Input bar ---------- */
+        form {
+            display: flex;
+            gap: 8px;
+            padding: 14px 20px;
+            background: var(--panel);
+            border-top: 1px solid var(--border);
+        }
+        form input {
+            flex: 1;
+            font: inherit;
+            padding: 9px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Adaptive RAG</h1>
+    <button id="upload-btn" type="button">Upload PDF</button>
+    <input id="file-input" type="file" accept=".pdf,application/pdf" hidden>
+    <button id="new-chat-btn" type="button">New chat</button>
+</header>
+
+<main id="messages"></main>
+
+<form id="ask-form">
+    <input id="query" type="text" placeholder="Ask about your documents, general knowledge, or something current..." autocomplete="off" required>
+    <button id="send-btn" class="primary" type="submit">Send</button>
+</form>
+
+<script>
+    const SESSION_KEY = 'adaptive-rag-session-id';
+
+    const messagesEl = document.getElementById('messages');
+    const form = document.getElementById('ask-form');
+    const queryInput = document.getElementById('query');
+    const sendBtn = document.getElementById('send-btn');
+    const uploadBtn = document.getElementById('upload-btn');
+    const fileInput = document.getElementById('file-input');
+    const newChatBtn = document.getElementById('new-chat-btn');
+
+    // The server creates the sessionId on the first question; we keep it so follow-ups share history
+    let sessionId = localStorage.getItem(SESSION_KEY);
+
+    // ---------- Rendering ----------
+    // textContent (never innerHTML) for anything from the server: answers can contain text
+    // copied from web pages or PDFs, and must never be interpreted as HTML/JS.
+
+    function addMessage(kind, text) {
+        const el = document.createElement('div');
+        el.className = `msg ${kind}`;
+        el.textContent = text;
+        messagesEl.appendChild(el);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return el;
+    }
+
+    function renderAnswer(el, route, answer, sources) {
+        el.className = 'msg assistant';
+        el.textContent = '';
+
+        if (route) {
+            const badge = document.createElement('span');
+            badge.className = `badge ${route}`;
+            badge.textContent = route;
+            el.appendChild(badge);
+            el.appendChild(document.createElement('br'));
+        }
+        el.appendChild(document.createTextNode(answer));
+
+        if (sources && sources.length > 0) {
+            const box = document.createElement('div');
+            box.className = 'sources';
+            box.textContent = 'Sources:';
+            const list = document.createElement('ul');
+            sources.forEach(source => list.appendChild(renderSource(source)));
+            box.appendChild(list);
+            el.appendChild(box);
+        }
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function renderSource(source) {
+        const item = document.createElement('li');
+        const score = source.score != null ? ` (${source.score.toFixed(2)})` : '';
+
+        // Only link real web URLs; blocks javascript: and other schemes from untrusted results
+        if (source.url && /^https?:\/\//i.test(source.url)) {
+            const link = document.createElement('a');
+            link.href = source.url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = source.title || source.url;
+            item.appendChild(link);
+            item.appendChild(document.createTextNode(score));
+        } else {
+            const page = source.page != null ? `, page ${source.page}` : '';
+            item.textContent = `${source.title}${page}${score}`;
+        }
+        return item;
+    }
+
+    function setBusy(busy) {
+        sendBtn.disabled = busy;
+        uploadBtn.disabled = busy;
+        queryInput.disabled = busy;
+        if (!busy) queryInput.focus();
+    }
+
+    async function errorText(response) {
+        try {
+            const body = await response.json();
+            return body.message || body.error || `HTTP ${response.status}`;
+        } catch {
+            return `HTTP ${response.status}`;
+        }
+    }
+
+    // ---------- Asking a question ----------
+
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const query = queryInput.value.trim();
+        if (!query) return;
+
+        addMessage('user', query);
+        queryInput.value = '';
+        const pending = addMessage('assistant thinking', 'Thinking...');
+        setBusy(true);
+
+        try {
+            const response = await fetch('/rag/query', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({query, sessionId})
+            });
+            if (!response.ok) throw new Error(await errorText(response));
+
+            const data = await response.json();
+            sessionId = data.sessionId;
+            localStorage.setItem(SESSION_KEY, sessionId);
+            renderAnswer(pending, data.route, data.answer, data.sources);
+        } catch (error) {
+            pending.remove();
+            addMessage('error', `Something went wrong: ${error.message}`);
+        } finally {
+            setBusy(false);
+        }
+    });
+
+    // ---------- Uploading a PDF ----------
+
+    uploadBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', async () => {
+        const file = fileInput.files[0];
+        fileInput.value = '';  // allow picking the same file again later
+        if (!file) return;
+
+        const status = addMessage('system', `Uploading ${file.name}... (embedding can take a while)`);
+        setBusy(true);
+        try {
+            // FormData builds the same multipart/form-data request as `curl -F "file=@..."`
+            const body = new FormData();
+            body.append('file', file);
+            const response = await fetch('/rag/documents/upload', {method: 'POST', body});
+            if (!response.ok) throw new Error(await errorText(response));
+
+            const result = await response.json();
+            status.textContent = `Ingested ${result.filename}: ${result.pages} pages -> ${result.chunks} chunks`;
+        } catch (error) {
+            status.className = 'msg error';
+            status.textContent = `Upload failed: ${error.message}`;
+        } finally {
+            setBusy(false);
+        }
+    });
+
+    // ---------- Conversations ----------
+
+    newChatBtn.addEventListener('click', () => {
+        sessionId = null;
+        localStorage.removeItem(SESSION_KEY);
+        messagesEl.textContent = '';
+        addMessage('system', 'New conversation started.');
+        queryInput.focus();
+    });
+
+    // On page load, restore the previous conversation from MongoDB (sources aren't stored, so none are shown)
+    async function restoreConversation() {
+        if (!sessionId) {
+            addMessage('system', 'Ask a question, or upload a PDF to ask about it.');
+            return;
+        }
+        try {
+            const response = await fetch(`/rag/sessions/${encodeURIComponent(sessionId)}/messages`);
+            if (!response.ok) throw new Error(await errorText(response));
+            const history = await response.json();
+            history.forEach(message => {
+                if (message.role === 'USER') {
+                    addMessage('user', message.content);
+                } else {
+                    renderAnswer(addMessage('assistant', ''), message.route, message.content, []);
+                }
+            });
+            if (history.length === 0) addMessage('system', 'Ask a question, or upload a PDF to ask about it.');
+        } catch (error) {
+            addMessage('error', `Couldn't restore the previous conversation: ${error.message}`);
+        }
+    }
+
+    restoreConversation();
+    queryInput.focus();
+</script>
+</body>
+</html>
