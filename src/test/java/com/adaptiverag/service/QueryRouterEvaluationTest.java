@@ -30,9 +30,12 @@ class QueryRouterEvaluationTest {
         LABELLED_QUERIES.put("What is the difference between TCP and UDP?", GENERAL);
         LABELLED_QUERIES.put("Write a Java method to reverse a string", GENERAL);
         LABELLED_QUERIES.put("Why is the sky blue?", GENERAL);
+        LABELLED_QUERIES.put("Who won the 2022 FIFA World Cup?", GENERAL);
+        LABELLED_QUERIES.put("In which year did the Berlin Wall fall?", GENERAL);
         LABELLED_QUERIES.put("What is the current price of Bitcoin?", WEB);
         LABELLED_QUERIES.put("What are today's top technology news headlines?", WEB);
         LABELLED_QUERIES.put("What is the latest stable version of Spring Boot?", WEB);
+        LABELLED_QUERIES.put("Who won yesterday's Premier League match?", WEB);
     }
 
     @Autowired

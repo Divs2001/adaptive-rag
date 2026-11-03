@@ -22,16 +22,18 @@ public class QueryRouterService {
 
             DOCUMENT - about the user's own uploaded files (resumes, reports, notes, manuals, plans),
                        or phrased like "my ...", "the document", "the PDF", "according to the file".
-            GENERAL  - general knowledge, concepts, definitions, explanations, math or coding help
-                       that a knowledgeable assistant can answer without looking anything up.
-            WEB      - needs current or live information: news, today's weather, prices, scores,
-                       latest versions or releases, or events after 2023.
+            GENERAL  - general knowledge, concepts, definitions, explanations, math or coding help,
+                       and historical facts or past events from before 2024 (including past results
+                       of sports events or elections), answerable without looking anything up.
+            WEB      - needs current or live information: news, today's weather, prices, live scores,
+                       latest versions or releases, or events from 2024 onwards.
 
             Examples:
             "What does my resume say about my Kafka experience?" = DOCUMENT
             "Summarize the uploaded project plan" = DOCUMENT
             "Explain how a hash map works" = GENERAL
             "What is 15 percent of 240?" = GENERAL
+            "Who won the 2011 Cricket World Cup?" = GENERAL
             "What is the weather in Jaipur today?" = WEB
             "Who won the most recent IPL final?" = WEB
 
