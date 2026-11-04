@@ -4,3 +4,7 @@ target/
 .vscode/
 .env
 .DS_Store
+
+# Personal notes, kept local only
+PROJECT_PLAN.md
+CLAUDE.md
