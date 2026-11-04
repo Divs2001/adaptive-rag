@@ -30,6 +30,9 @@ public class QueryRewriterService {
             - If the follow-up already makes sense on its own, return it EXACTLY unchanged, even if
               the conversation was about something else. Questions about "the document", "my file"
               or "the PDF" are always standalone.
+            - If the conversation was about one of the user's documents (CV, resume, PDF, report) and
+              the follow-up refers to its contents ("them", "those", "that", "in more detail"), keep
+              that document in the rewritten question, e.g. "... from my CV".
             - Do NOT answer the question. Return only the question, nothing else.
 
             Examples (conversation about who won the 2018 FIFA World Cup, answered "France"):
@@ -41,6 +44,12 @@ public class QueryRewriterService {
             Standalone question: What does my resume say about my Java experience?
             Follow-up: What is the capital of Japan?
             Standalone question: What is the capital of Japan?
+
+            Examples (conversation about the projects listed in the user's resume):
+            Follow-up: Sort them by year
+            Standalone question: List the projects from my resume sorted by year
+            Follow-up: Can you explain those in more detail?
+            Standalone question: Explain the projects listed in my resume in more detail
 
             Now the real conversation:
             <conversation>

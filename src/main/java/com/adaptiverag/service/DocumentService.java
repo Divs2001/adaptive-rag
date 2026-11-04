@@ -24,15 +24,21 @@ public class DocumentService {
     private final TextChunker textChunker;
     private final int topK;
     private final double similarityThreshold;
+    private final String queryPrefix;
+    private final String documentPrefix;
 
     public DocumentService(VectorStore vectorStore,
                            TextChunker textChunker,
                            @Value("${rag.retrieval.top-k:4}") int topK,
-                           @Value("${rag.retrieval.similarity-threshold:0.5}") double similarityThreshold) {
+                           @Value("${rag.retrieval.similarity-threshold:0.5}") double similarityThreshold,
+                           @Value("${rag.embedding.query-prefix:}") String queryPrefix,
+                           @Value("${rag.embedding.document-prefix:}") String documentPrefix) {
         this.vectorStore = vectorStore;
         this.textChunker = textChunker;
         this.topK = topK;
         this.similarityThreshold = similarityThreshold;
+        this.queryPrefix = queryPrefix;
+        this.documentPrefix = documentPrefix;
     }
 
     /**
@@ -41,12 +47,12 @@ public class DocumentService {
      */
     public List<Document> search(String query) {
         List<Document> chunks = vectorStore.similaritySearch(SearchRequest.builder()
-                .query(query)
+                .query(queryPrefix + query)
                 .topK(topK)
                 .similarityThreshold(similarityThreshold)
                 .build());
         log.info("Retrieved {} chunks for query '{}'", chunks.size(), query);
-        return chunks;
+        return chunks.stream().map(this::withoutDocumentPrefix).toList();
     }
 
     public IngestionResult ingest(Resource pdf, String filename) {
@@ -61,7 +67,8 @@ public class DocumentService {
 
             List<String> pieces = textChunker.chunk(page.getText());
             for (int i = 0; i < pieces.size(); i++) {
-                chunks.add(new Document(pieces.get(i), Map.of(
+                // The vector store embeds the stored text, so the embedding model's document prefix goes here
+                chunks.add(new Document(documentPrefix + pieces.get(i), Map.of(
                         "filename", filename,
                         "page", pageNumber,
                         "chunkIndex", i)));
@@ -74,5 +81,19 @@ public class DocumentService {
         }
         log.info("Ingested '{}': {} pages -> {} chunks", filename, pages.size(), chunks.size());
         return new IngestionResult(filename, pages.size(), chunks.size());
+    }
+
+    /** The prefix is only for the embedding model; the LLM prompt should see the clean chunk text. */
+    private Document withoutDocumentPrefix(Document chunk) {
+        String text = chunk.getText();
+        if (documentPrefix.isEmpty() || text == null || !text.startsWith(documentPrefix)) {
+            return chunk;
+        }
+        return Document.builder()
+                .id(chunk.getId())
+                .text(text.substring(documentPrefix.length()))
+                .metadata(chunk.getMetadata())
+                .score(chunk.getScore())
+                .build();
     }
 }

@@ -22,6 +22,9 @@ public class QueryRouterService {
 
             DOCUMENT - about the user's own uploaded files (resumes, reports, notes, manuals, plans),
                        or phrased like "my ...", "the document", "the PDF", "according to the file".
+                       Any question about the user's personal details (my experience, my skills,
+                       my projects, my education, my salary, my notice period) is DOCUMENT, because
+                       those can only be known from the user's files.
             GENERAL  - general knowledge, concepts, definitions, explanations, math or coding help,
                        and historical facts or past events from before 2024 (including past results
                        of sports events or elections), answerable without looking anything up.
@@ -31,6 +34,7 @@ public class QueryRouterService {
             Examples:
             "What does my resume say about my Kafka experience?" = DOCUMENT
             "Summarize the uploaded project plan" = DOCUMENT
+            "How many years of experience do I have?" = DOCUMENT
             "Explain how a hash map works" = GENERAL
             "What is 15 percent of 240?" = GENERAL
             "Who won the 2011 Cricket World Cup?" = GENERAL

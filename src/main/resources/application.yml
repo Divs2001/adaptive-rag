@@ -31,11 +31,20 @@ spring:
 
 rag:
   chunking:
-    chunk-size: 500
-    overlap: 50
+    # Smaller chunks keep each vector focused on one topic (e.g. a CV's skills section)
+    chunk-size: 200
+    overlap: 40
   retrieval:
-    top-k: 4
-    similarity-threshold: 0.5
+    # 200-word chunks: 6 covers a full section (e.g. all jobs in a CV) and still keeps the prompt small
+    top-k: 6
+    # The router already keeps off-topic questions away; this only drops clearly unrelated chunks.
+    # With nomic task prefixes, relevant chunks typically score ~0.5-0.6.
+    similarity-threshold: 0.35
+  embedding:
+    # nomic-embed-text was trained with these task prefixes; leave empty for models that don't use them.
+    # Changing them (or the embedding model) requires deleting the Qdrant collection and re-ingesting.
+    query-prefix: "search_query: "
+    document-prefix: "search_document: "
   chat-history:
     max-messages: 6
   web-search:

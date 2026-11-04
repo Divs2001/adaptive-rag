@@ -27,6 +27,8 @@ class QueryRouterEvaluationTest {
         LABELLED_QUERIES.put("What skills are listed in my uploaded resume?", DOCUMENT);
         LABELLED_QUERIES.put("According to the PDF, what are the day 2 tasks?", DOCUMENT);
         LABELLED_QUERIES.put("Which tech stack does the project plan document mention?", DOCUMENT);
+        LABELLED_QUERIES.put("Tell me about my work experience in detail", DOCUMENT);
+        LABELLED_QUERIES.put("List my jobs in ascending order of the year", DOCUMENT);
         LABELLED_QUERIES.put("What is the difference between TCP and UDP?", GENERAL);
         LABELLED_QUERIES.put("Write a Java method to reverse a string", GENERAL);
         LABELLED_QUERIES.put("Why is the sky blue?", GENERAL);
